@@ -1,0 +1,13 @@
+Regression Term,Beta,SE,p.value,pLabel
+(Intercept),0.37,0.15,0.025,*
+SentTypeTwoSentences,0.05,0.07,0.421,
+SentTypeTwoSentences:SentTaskComprehensionQ,0.72,0.1,7.83e-10,***
+SentTypeOneSentence:SentTaskMemoryAll,0.51,0.09,6.36e-07,***
+SentTypeOneSentence:SentTaskMemoryLast,0.45,0.1,4.09e-05,***
+SentTypeTwoSentences:SentTaskSentiment,0.77,0.13,4.55e-07,***
+SentTypeOneSentence:SentTaskButtonPress:EffectRef,0.23,0.07,0.001,**
+SentTypeTwoSentences:SentTaskButtonPress:EffectRef,0.73,0.13,1.07e-07,***
+SentTypeTwoSentences:SentTaskComprehensionQ:EffectRef,-0.13,0.08,0.121,
+SentTypeOneSentence:SentTaskMemoryAll:EffectRef,0.22,0.08,0.005,**
+SentTypeOneSentence:SentTaskMemoryLast:EffectRef,0.18,0.08,0.021,*
+SentTypeTwoSentences:SentTaskSentiment:EffectRef,-0.16,0.1,0.122,

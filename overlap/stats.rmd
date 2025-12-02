@@ -1,0 +1,223 @@
+---
+title: "fROI Overlap Statistical Analyses"
+output: html_document
+---
+
+```{r, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lmerTest)
+library(dplyr)
+library(readr)
+library(emmeans)
+library(multcomp)
+library(tidyr)
+```
+
+```{r}
+extract_stats <- function(m, coef_names) {
+  model.df = data.frame(coef_names, summary(m)$coefficients[,c(1,2,5)])
+  names(model.df) = c('Regression Term', 'Beta', 'SE', 'p.value')
+  model.df = model.df %>% mutate(Beta = round(Beta, 2), 
+           SE = round(SE, 2),
+           p.value = ifelse(p.value>0.001, round(p.value, 3),
+                            formatC(p.value, format = "e", digits = 2)))
+  return(model.df)
+}
+
+correct_FDR <- function(stats_df) {
+  stats_df = stats_df %>%
+    group_by(`Regression Term`) %>%
+    mutate(p.value = p.adjust(p.value, method="fdr")) %>%
+    mutate(p.value.FDR = ifelse(p.value>=0.001, as.character(round(p.value, 3)), '<.001')) %>%
+    mutate(pLabel = ifelse(p.value<0.001, "***", 
+                         ifelse(p.value<0.01, "**",
+                                ifelse(p.value<0.05, "*", ""))))
+  stats_df$p.value = NULL
+  return(stats_df)
+}
+```
+
+# LH 
+
+Load data:
+
+```{r, echo=TRUE}
+data_pth = '/Users/rgao76/Documents/DiffTasks/overlap_2025/Data/all_data_LH.csv'
+data = read.csv(data_pth) %>% 
+  rename(Localizer1=Task1, Localizer2=Task2)
+data$Subject_Type = factor(data$Subject_Type, 
+                              c("Within-subject", "Between-subject"))
+data$Task_Type = factor(data$Task_Type, 
+                              c("Same-task", "Different-task"))
+data$Type = interaction(data$Subject_Type, data$Task_Type)
+data$Localizers <- interaction(
+  pmin(data$Localizer1, data$Localizer2),
+  pmax(data$Localizer1, data$Localizer2)
+)
+data$Subjects <- interaction(
+  pmin(data$Subject1, data$Subject2),
+  pmax(data$Subject1, data$Subject2)
+)
+```
+
+```{r, echo=TRUE}
+model = lmer(DC ~ Localizer1:Type + (1|Subjects) + (1|ROI), data = data, REML = FALSE, 
+                        control = lmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 1e5)))
+coef_names = row.names(coefficients(summary(model)))
+stats <- extract_stats(model, coef_names) %>% 
+  mutate(p.value = as.numeric(p.value)) %>% 
+  mutate(pLabel = ifelse(p.value<0.001, "***", 
+                        ifelse(p.value<0.01, "**",
+                        ifelse(p.value<0.05, "*", "")))) %>% 
+  arrange(`Regression Term`)
+write.table(stats, file = "Tables/Stats_LH.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+```{r echo=TRUE}
+my_contrasts <- list()
+for (i in c(1,2,3,4,5,6)) {
+  arr0 = replicate(24, 0)
+  arr0[i] = 1
+  arr0[12+i] = -1
+  my_contrasts[[paste0("V", i, ":Within-subject.Same-task vs V", i, ":Within-subject.Different-task")]] = arr0
+  
+  arr1 = replicate(24, 0)
+  arr1[6+i] = -1
+  arr1[12+i] = 1
+  my_contrasts[[paste0("V", i, ":Within-subject.Different-task vs V", i, ":Between-subject.Same-task")]] = arr1
+}
+
+emm <- emmeans(model, ~ Localizer1:Type)
+custom_contr <- contrast(emm, method = my_contrasts)
+results = test(custom_contr, side = ">", adjust="bonferroni")
+
+stats_df = results %>% 
+    rename(`Regression Term` = `contrast`, `Beta` = `estimate`) %>% 
+    dplyr::select(-z.ratio, -df) %>% 
+  mutate(p.value = as.numeric(p.value)) %>% 
+  mutate(pLabel = ifelse(p.value<0.001, "***", 
+                        ifelse(p.value<0.01, "**",
+                        ifelse(p.value<0.05, "*", ""))))
+write.table(stats_df, file = "Tables/stats_LH_posthoc.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+# RH
+
+Load data:
+
+```{r, echo=TRUE}
+data_pth = '/Users/rgao76/Documents/DiffTasks/overlap_2025/Data/all_data_RH.csv'
+data = read.csv(data_pth) %>% 
+  rename(Localizer1=Task1, Localizer2=Task2)
+data$Subject_Type = factor(data$Subject_Type, 
+                              c("Within-subject", "Between-subject"))
+data$Task_Type = factor(data$Task_Type, 
+                              c("Same-task", "Different-task"))
+data$Type = interaction(data$Subject_Type, data$Task_Type)
+data$Localizers <- interaction(
+  pmin(data$Localizer1, data$Localizer2),
+  pmax(data$Localizer1, data$Localizer2)
+)
+data$Subjects <- interaction(
+  pmin(data$Subject1, data$Subject2),
+  pmax(data$Subject1, data$Subject2)
+)
+```
+
+```{r, echo=TRUE}
+model = lmer(DC ~ Localizer1:Type + (1|Subjects) + (1|ROI), data = data, REML = FALSE, 
+                        control = lmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 1e5)))
+coef_names = row.names(coefficients(summary(model)))
+stats <- extract_stats(model, coef_names) %>% 
+  mutate(p.value = as.numeric(p.value)) %>% 
+  mutate(pLabel = ifelse(p.value<0.001, "***", 
+                        ifelse(p.value<0.01, "**",
+                        ifelse(p.value<0.05, "*", "")))) %>% 
+  arrange(`Regression Term`)
+write.table(stats, file = "Tables/Stats_RH.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+```{r echo=TRUE}
+emm <- emmeans(model, ~ Localizer1:Type)
+custom_contr <- contrast(emm, method = my_contrasts)
+results = test(custom_contr, side = ">", adjust="bonferroni")
+
+stats_df = results %>% 
+    rename(`Regression Term` = `contrast`, `Beta` = `estimate`) %>% 
+    dplyr::select(-z.ratio, -df) %>% 
+  mutate(p.value = as.numeric(p.value)) %>% 
+  mutate(pLabel = ifelse(p.value<0.001, "***", 
+                        ifelse(p.value<0.01, "**",
+                        ifelse(p.value<0.05, "*", ""))))
+write.table(stats_df, file = "Tables/stats_RH_posthoc.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+# ROI
+
+Load data:
+
+```{r, echo=TRUE}
+data_pth.lh = '/Users/rgao76/Documents/DiffTasks/overlap_2025/Data/all_data_LH.csv'
+data.lh = read.csv(data_pth.lh) %>% rename(Localizer1=Task1, Localizer2=Task2)
+data_pth.rh = '/Users/rgao76/Documents/DiffTasks/overlap_2025/Data/all_data_RH.csv'
+data.rh = read.csv(data_pth.rh) %>% rename(Localizer1=Task1, Localizer2=Task2)
+data = rbind(data.lh, data.rh)
+
+data$Subject_Type = factor(data$Subject_Type, 
+                              c("Within-subject", "Between-subject"))
+data$Task_Type = factor(data$Task_Type, 
+                              c("Same-task", "Different-task"))
+data$Type = interaction(data$Subject_Type, data$Task_Type)
+data$Localizers <- interaction(
+  pmin(data$Localizer1, data$Localizer2),
+  pmax(data$Localizer1, data$Localizer2)
+)
+data$Subjects <- interaction(
+  pmin(data$Subject1, data$Subject2),
+  pmax(data$Subject1, data$Subject2)
+)
+roi_mapping <- c(
+  "1" = "LH_IFGorb",
+  "2" = "LH_IFG",
+  "3" = "LH_MFG",
+  "4" = "LH_AntTemp",
+  "5" = "LH_PostTemp",
+  "7" = "RH_IFGorb",
+  "8" = "RH_IFG",
+  "9" = "RH_MFG",
+  "10" = "RH_AntTemp",
+  "11" = "RH_PostTemp"
+)
+data$ROI <- as.character(roi_mapping[as.character(data$ROI)])
+```
+
+```{r, echo=TRUE}
+models.roi <- list()
+stats.roi <- list()
+index = 1
+
+for (roi in unique(data$ROI)) {
+  optimizer = "bobyqa"
+  data_subset <- subset(data, ROI == roi)
+  
+  models.roi[[roi]] <- lmer(DC ~ Localizer1:Type + (1|Subjects), data = data_subset, REML = FALSE, 
+                        control = lmerControl(optimizer = 'bobyqa', optCtrl = list(maxfun = 1e5)))
+  
+  coef_names = row.names(coefficients(summary(models.roi[[roi]])))
+  
+  emm <- emmeans(models.roi[[roi]], ~ Localizer1:Type)
+  custom_contr <- contrast(emm, method = my_contrasts)
+  stats.roi[[index]] <- test(custom_contr, side = ">", adjust="bonferroni") %>% 
+    rename(`Regression Term` = `contrast`, `Beta` = `estimate`) %>% 
+    dplyr::select(-z.ratio, -df)
+  stats.roi[[index]]$ROI = roi
+  index = index + 1
+}
+
+stats_df = do.call("rbind", stats.roi)
+stats_df = correct_FDR(stats_df) %>% 
+  pivot_wider(names_from=ROI, values_from = c(Beta,SE,p.value.FDR,pLabel), names_vary='slowest') %>% 
+  arrange(`Regression Term`)
+write.table(stats_df, file = "Tables/stats_by_ROI.csv", sep = ",", quote = FALSE, row.names = F)
+```
+

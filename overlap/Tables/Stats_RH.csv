@@ -1,0 +1,25 @@
+Regression Term,Beta,SE,p.value,pLabel
+(Intercept),0.11,0.01,1.29e-06,***
+Localizer1V1:TypeBetween-subject.Different-task,0,0,0.281,
+Localizer1V1:TypeBetween-subject.Same-task,0,0,0.844,
+Localizer1V1:TypeWithin-subject.Different-task,0.19,0.01,1.58e-206,***
+Localizer1V1:TypeWithin-subject.Same-task,0.19,0.01,6.75e-139,***
+Localizer1V2:TypeBetween-subject.Different-task,0,0,0.034,*
+Localizer1V2:TypeBetween-subject.Same-task,0,0,0.05,
+Localizer1V2:TypeWithin-subject.Different-task,0.23,0.01,3.73e-258,***
+Localizer1V2:TypeWithin-subject.Same-task,0.26,0.01,5.08e-224,***
+Localizer1V3:TypeBetween-subject.Different-task,0,0,0.03,*
+Localizer1V3:TypeBetween-subject.Same-task,0,0,0.895,
+Localizer1V3:TypeWithin-subject.Different-task,0.21,0.01,3.53e-217,***
+Localizer1V3:TypeWithin-subject.Same-task,0.2,0.01,7.28e-128,***
+Localizer1V4:TypeBetween-subject.Different-task,0.01,0,0.000334,***
+Localizer1V4:TypeBetween-subject.Same-task,0.02,0,2.16e-13,***
+Localizer1V4:TypeWithin-subject.Different-task,0.25,0.01,2.5e-305,***
+Localizer1V4:TypeWithin-subject.Same-task,0.43,0.01,0,***
+Localizer1V5:TypeBetween-subject.Different-task,0.01,0,0.000312,***
+Localizer1V5:TypeBetween-subject.Same-task,0.02,0,1.06e-11,***
+Localizer1V5:TypeWithin-subject.Different-task,0.26,0.01,2.38000018343966e-317,***
+Localizer1V5:TypeWithin-subject.Same-task,0.42,0.01,0,***
+Localizer1V6:TypeBetween-subject.Same-task,0.01,0,0.035,*
+Localizer1V6:TypeWithin-subject.Different-task,0.22,0.01,7.93e-200,***
+Localizer1V6:TypeWithin-subject.Same-task,0.31,0.01,1.15e-201,***

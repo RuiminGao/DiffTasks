@@ -1,0 +1,13 @@
+Regression Term,Beta,SE,p.value,pLabel
+V1:Within-subject.Same-task vs V1:Within-subject.Different-task,0.0566440124475378,0.00694129280011698,2.00281652024419e-15,***
+V1:Within-subject.Different-task vs V1:Between-subject.Same-task,0.334991655404111,0.00678887661297059,0,***
+V2:Within-subject.Same-task vs V2:Within-subject.Different-task,0.0637272243118367,0.00808431190540917,1.92035123890643e-14,***
+V2:Within-subject.Different-task vs V2:Between-subject.Same-task,0.387544310154747,0.00719480286082447,0,***
+V3:Within-subject.Same-task vs V3:Within-subject.Different-task,0.0190910178164469,0.00817414353355674,0.117092191482479,
+V3:Within-subject.Different-task vs V3:Between-subject.Same-task,0.359341993804871,0.00722047163063548,0,***
+V4:Within-subject.Same-task vs V4:Within-subject.Different-task,0.159772640130913,0.00719034124730095,1.30716784436129e-108,***
+V4:Within-subject.Different-task vs V4:Between-subject.Same-task,0.40014233667929,0.00686349027074615,0,***
+V5:Within-subject.Same-task vs V5:Within-subject.Different-task,0.13072554337185,0.00816304965611364,6.09237580923055e-57,***
+V5:Within-subject.Different-task vs V5:Between-subject.Same-task,0.392515782098229,0.00719805440770821,0,***
+V6:Within-subject.Same-task vs V6:Within-subject.Different-task,0.0706522604878517,0.0114652166988952,4.301382493916e-09,***
+V6:Within-subject.Different-task vs V6:Between-subject.Same-task,0.378227879687686,0.00887267350413015,0,***

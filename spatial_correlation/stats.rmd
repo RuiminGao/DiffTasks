@@ -1,0 +1,288 @@
+---
+title: "Spatial Correlation Statistical Analyses"
+output: html_document
+---
+
+```{r, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lmerTest)
+library(dplyr)
+library(readr)
+library(emmeans)
+library(multcomp)
+library(tidyr)
+```
+
+```{r}
+extract_stats <- function(m, coef_names) {
+  model.df = data.frame(coef_names, summary(m)$coefficients[,c(1,2,5)])
+  names(model.df) = c('Regression Term', 'Beta', 'SE', 'p.value')
+  model.df = model.df %>% mutate(
+    #Beta = round(Beta, 2), 
+      #     SE = round(SE, 2),
+           p.value = ifelse(p.value>0.001, round(p.value, 3),
+                            formatC(p.value, format = "e", digits = 2)))
+  return(model.df)
+}
+
+correct_FDR <- function(stats_df) {
+  stats_df = stats_df %>%
+    group_by(`Regression Term`) %>%
+    mutate(p.value = p.adjust(p.value, method="fdr")) %>%
+    mutate(p.value.FDR = ifelse(p.value>=0.001, as.character(round(p.value, 3)), '<.001')) %>%
+    mutate(pLabel = ifelse(p.value<0.001, "***", 
+                         ifelse(p.value<0.01, "**",
+                                ifelse(p.value<0.05, "*", ""))))
+  stats_df$p.value = NULL
+  return(stats_df)
+}
+```
+
+Load data:
+
+```{r, echo=TRUE}
+data_pth = '/Users/rgao76/Documents/DiffTasks/spatial_correlation_2025/Data/all_data.csv'
+data = read.csv(data_pth) %>% 
+  dplyr::select(Subject, System, Hemisphere, ROI, Localizer, Task1, Effect1, Type1, Task2, Effect2, Type2, FisherZ)
+
+effect_levels <- c("N", "S")
+task_levels   <- c("ButtonPress", "MemoryLast", "MemoryAll", "SentimentQ", "ComprehensionQ")
+
+data <- data %>%
+  mutate(
+    Effect1 = factor(Effect1, levels = effect_levels, ordered = TRUE),
+    Effect2 = factor(Effect2, levels = effect_levels, ordered = TRUE),
+    Task1   = factor(Task1,   levels = task_levels,   ordered = TRUE),
+    Task2   = factor(Task2,   levels = task_levels,   ordered = TRUE)
+  ) %>% 
+mutate(Task1 = if_else(Task1 != "ButtonPress", "Task", Task1)) %>% 
+mutate(Task2 = if_else(Task2 != "ButtonPress", "Task", Task2))
+
+data_swapped <- data %>%
+  mutate(
+    swap = (Effect1 > Effect2) | ((Effect1 == Effect2) & (Task1 > Task2))
+  ) %>%
+  mutate(
+    Effect1_new = if_else(swap, Effect2, Effect1),
+    Effect2_new = if_else(swap, Effect1, Effect2),
+    Task1_new   = if_else(swap, Task2,   Task1),
+    Task2_new   = if_else(swap, Task1,   Task2),
+    Type1_new   = if_else(swap, Type2,   Type1),
+    Type2_new   = if_else(swap, Type1,   Type2)
+  ) %>%
+  dplyr::select(-Effect1, -Effect2, -Task1, -Task2, -Type1, -Type2, -swap) %>%
+  rename(
+    Effect1 = Effect1_new,
+    Effect2 = Effect2_new,
+    Task1   = Task1_new,
+    Task2   = Task2_new,
+    Type1   = Type1_new,
+    Type2   = Type2_new
+  )
+
+data = data_swapped
+
+data$Effects = interaction(data$Effect1, data$Effect2)
+# data$Tasks = interaction(data$Task1, data$Task2)
+data$Tasks <- interaction(
+  pmin(data$Task1, data$Task2),
+  pmax(data$Task1, data$Task2)
+)
+data$Types <- interaction(
+  pmin(data$Type1, data$Type2),
+  pmax(data$Type1, data$Type2)
+)
+
+
+data.lang = data %>% filter(System == 'language') %>% 
+  filter(ROI != 'LH_AngG') %>% 
+  filter(ROI != 'RH_AngG') 
+data.lang.lh = data.lang %>% filter(Hemisphere == 'LH')
+data.lang.rh = data.lang %>% filter(Hemisphere == 'RH')
+
+data.md = data %>% filter(System == 'MD')
+data.md.lh = data.md %>% filter(Hemisphere == 'LH')
+data.md.rh = data.md %>% filter(Hemisphere == 'RH')
+data.dmn = data %>% filter(System == 'DMN')
+data.dmn.lh = data.dmn %>% filter(Hemisphere == 'LH')
+data.dmn.rh = data.dmn %>% filter(Hemisphere == 'RH')
+
+data.md$Hemisphere = factor(data.md$Hemisphere, levels=c("LH", "RH"))
+contrasts(data.md$Hemisphere) = c(0.5, -0.5)
+colnames(attr(data.md$Hemisphere, "contrasts")) = "LH > RH" 
+
+data.dmn$Hemisphere = factor(data.dmn$Hemisphere, levels=c("LH", "RH"))
+contrasts(data.dmn$Hemisphere) = c(0.5, -0.5)
+colnames(attr(data.dmn$Hemisphere, "contrasts")) = "LH > RH" 
+```
+
+# Language
+```{r, echo=TRUE}
+optimizer = "bobyqa"
+model.lh <- lmer(FisherZ ~ Effects + Effects:Types + Effects:Tasks + (1|Subject) + (1|ROI) + (1|Localizer), data = data.lang.lh, REML = FALSE, 
+                    control = lmerControl(optimizer = optimizer, optCtrl = list(maxfun = 1e5)))
+
+coef_names = row.names(coefficients(summary(model.lh)))
+stats <- extract_stats(model.lh, coef_names) %>% 
+  mutate(p.value = as.numeric(p.value)) %>% 
+  mutate(pLabel = ifelse(p.value<0.001, "***", 
+                        ifelse(p.value<0.01, "**",
+                        ifelse(p.value<0.05, "*", "")))) %>% 
+  arrange(`Regression Term`)
+write.table(stats, file = "Tables/Lang_LH.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+```{r, echo=TRUE}
+model.rh <- lmer(FisherZ ~ Effects + Effects:Types + Effects:Tasks + (1|Subject) + (1|ROI) + (1|Localizer), data = data.lang.rh, REML = FALSE, 
+                    control = lmerControl(optimizer = optimizer, optCtrl = list(maxfun = 1e5)))
+
+coef_names = row.names(coefficients(summary(model.rh)))
+stats <- extract_stats(model.rh, coef_names) %>% 
+  mutate(p.value = as.numeric(p.value)) %>% 
+  mutate(pLabel = ifelse(p.value<0.001, "***", 
+                        ifelse(p.value<0.01, "**",
+                        ifelse(p.value<0.05, "*", "")))) %>% 
+  arrange(`Regression Term`)
+write.table(stats, file = "Tables/Lang_RH.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+# MD
+
+```{r, echo=TRUE}
+optimizer = "bobyqa"
+model.lh <- lmer(FisherZ ~ Effects + Effects:Types + Effects:Tasks + (1|Subject) + (1|ROI), data = data.md.lh, REML = FALSE, 
+                    control = lmerControl(optimizer = optimizer, optCtrl = list(maxfun = 1e5)))
+
+coef_names = row.names(coefficients(summary(model.lh)))
+stats <- extract_stats(model.lh, coef_names) %>% 
+  mutate(p.value = as.numeric(p.value)) %>% 
+  mutate(pLabel = ifelse(p.value<0.001, "***", 
+                        ifelse(p.value<0.01, "**",
+                        ifelse(p.value<0.05, "*", "")))) %>% 
+  arrange(`Regression Term`)
+write.table(stats, file = "Tables/MD_LH.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+```{r, echo=TRUE}
+model.rh <- lmer(FisherZ ~ Effects + Effects:Types + Effects:Tasks + (1|Subject) + (1|ROI), data = data.md.rh, REML = FALSE, 
+                    control = lmerControl(optimizer = optimizer, optCtrl = list(maxfun = 1e5)))
+
+coef_names = row.names(coefficients(summary(model.rh)))
+stats <- extract_stats(model.rh, coef_names) %>% 
+  mutate(p.value = as.numeric(p.value)) %>% 
+  mutate(pLabel = ifelse(p.value<0.001, "***", 
+                        ifelse(p.value<0.01, "**",
+                        ifelse(p.value<0.05, "*", "")))) %>% 
+  arrange(`Regression Term`)
+write.table(stats, file = "Tables/MD_RH.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+# DMN
+
+```{r, echo=TRUE}
+optimizer = "bobyqa"
+model.lh <- lmer(FisherZ ~ Effects + Effects:Types + Effects:Tasks + (1|Subject) + (1|ROI), data = data.dmn.lh, REML = FALSE, 
+                    control = lmerControl(optimizer = optimizer, optCtrl = list(maxfun = 1e5)))
+
+coef_names = row.names(coefficients(summary(model.lh)))
+stats <- extract_stats(model.lh, coef_names) %>% 
+  mutate(p.value = as.numeric(p.value)) %>% 
+  mutate(pLabel = ifelse(p.value<0.001, "***", 
+                        ifelse(p.value<0.01, "**",
+                        ifelse(p.value<0.05, "*", "")))) %>% 
+  arrange(`Regression Term`)
+write.table(stats, file = "Tables/DMN_LH.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+```{r, echo=TRUE}
+model.rh <- lmer(FisherZ ~ Effects + Effects:Types + Effects:Tasks + (1|Subject) + (1|ROI), data = data.dmn.rh, REML = FALSE, 
+                    control = lmerControl(optimizer = optimizer, optCtrl = list(maxfun = 1e5)))
+
+coef_names = row.names(coefficients(summary(model.rh)))
+stats <- extract_stats(model.rh, coef_names) %>% 
+  mutate(p.value = as.numeric(p.value)) %>% 
+  mutate(pLabel = ifelse(p.value<0.001, "***", 
+                        ifelse(p.value<0.01, "**",
+                        ifelse(p.value<0.05, "*", "")))) %>% 
+  arrange(`Regression Term`)
+write.table(stats, file = "Tables/DMN_RH.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+
+# By Localizer
+
+```{r, echo=TRUE}
+models.lh <- list()
+stats.lh <- list()
+index = 1
+
+for (loc in unique(data.lang.lh$Localizer)) {
+  optimizer = "bobyqa"
+  data_subset <- subset(data.lang.lh, Localizer == loc)
+  
+  models.lh[[loc]] <- lmer(FisherZ ~ Effects + Effects:Types + Effects:Tasks + (1|Subject) + (1|ROI), data = data_subset, REML = FALSE, 
+                        control = lmerControl(optimizer = optimizer, optCtrl = list(maxfun = 1e5)))
+  
+  coef_names = row.names(coefficients(summary(models.lh[[loc]])))
+  stats.lh[[index]] <- extract_stats(models.lh[[loc]], coef_names) %>% 
+    mutate(Localizer=loc)
+  index = index + 1
+}
+
+stats_df = do.call("rbind", stats.lh)
+stats_df = correct_FDR(stats_df) %>% 
+  pivot_wider(names_from=Localizer, values_from = c(Beta,SE,p.value.FDR,pLabel), names_vary='slowest') %>% 
+  arrange(`Regression Term`)
+write.table(stats_df, file = "Tables/Lang_LH_by_localizer.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+```{r, echo=TRUE}
+models.rh <- list()
+stats.rh <- list()
+index = 1
+
+for (loc in unique(data.lang.rh$Localizer)) {
+  optimizer = "bobyqa"
+  data_subset <- subset(data.lang.rh, Localizer == loc)
+  models.rh[[loc]] <- lmer(FisherZ ~ Effects + Effects:Types + Effects:Tasks + (1|Subject) + (1|ROI), data = data_subset, REML = FALSE, 
+                        control = lmerControl(optimizer = optimizer, optCtrl = list(maxfun = 1e5)))
+  
+  coef_names = row.names(coefficients(summary(models.rh[[loc]])))
+  stats.rh[[index]] <- extract_stats(models.rh[[loc]], coef_names) %>% 
+    mutate(Localizer=loc)
+  index = index + 1
+}
+
+stats_df = do.call("rbind", stats.rh)
+stats_df = correct_FDR(stats_df) %>% 
+  pivot_wider(names_from=Localizer, values_from = c(Beta,SE,p.value.FDR,pLabel), names_vary='slowest') %>% 
+  arrange(`Regression Term`)
+write.table(stats_df, file = "Tables/Lang_RH_by_localizer.csv", sep = ",", quote = FALSE, row.names = F)
+```
+
+## By ROI
+
+```{r, echo=TRUE}
+models.roi <- list()
+stats.roi <- list()
+index = 1
+
+for (roi in unique(data.lang$ROI)) {
+  optimizer = "bobyqa"
+  data_subset <- subset(data.lang, ROI == roi)
+  
+  models.roi[[roi]] <- lmer(FisherZ ~ Effects + Effects:Types + Effects:Tasks + (1|Localizer) + (1|Subject), data = data_subset, REML = FALSE, 
+                        control = lmerControl(optimizer = optimizer, optCtrl = list(maxfun = 1e5)))
+  
+  coef_names = row.names(coefficients(summary(models.roi[[roi]])))
+  stats.roi[[index]] <- extract_stats(models.roi[[roi]], coef_names) %>% 
+    mutate(ROI=roi)
+  index = index + 1
+}
+
+stats_df = do.call("rbind", stats.roi)
+stats_df = correct_FDR(stats_df) %>% 
+  pivot_wider(names_from=ROI, values_from = c(Beta,SE,p.value.FDR,pLabel), names_vary='slowest') %>% 
+  arrange(`Regression Term`)
+write.table(stats_df, file = "Tables/Lang_by_ROI.csv", sep = ",", quote = FALSE, row.names = F)
+```

@@ -1,0 +1,7 @@
+- Make model files using make_modelfiles_DiffTasks.py
+
+- Make PARAS files using make_paras_byblock.py
+
+- Make cat files using make_catfiles_byblock.py
+
+- sbatch run_all.sh

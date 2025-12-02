@@ -1,0 +1,117 @@
+---
+title: "DiffTasks: Behavioral Analyses"
+output: html_document
+---
+
+NOT FINISHED YET
+
+```{r, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lmerTest)
+library(dplyr)
+library(readr)
+library(emmeans)
+library(multcomp)
+library(tidyr)
+library(broom.mixed)
+```
+
+```{r}
+extract_stats <- function(m, coef_names) {
+  model.df = data.frame(coef_names, summary(m)$coefficients[,c(1,2,5)])
+  names(model.df) = c('Regression Term', 'Beta', 'SE', 'p.value')
+  model.df = model.df %>% mutate(Beta = round(Beta, 2), 
+           SE = round(SE, 2),
+           p.value = ifelse(p.value>0.001, round(p.value, 3),
+                            formatC(p.value, format = "e", digits = 2)))
+  return(model.df)
+}
+
+correct_FDR <- function(stats_df) {
+  stats_df = stats_df %>%
+    group_by(`Regression Term`) %>%
+    mutate(p.value = p.adjust(p.value, method="fdr")) %>%
+    mutate(p.value.FDR = ifelse(p.value>=0.001, as.character(round(p.value, 3)), '<.001')) %>%
+    mutate(pLabel = ifelse(p.value<0.001, "***", 
+                         ifelse(p.value<0.01, "**",
+                                ifelse(p.value<0.05, "*", ""))))
+  stats_df$p.value = NULL
+  return(stats_df)
+}
+```
+
+```{r, echo=TRUE}
+data <- read_csv("./qc/Data/included_data_by_trial_postQC.csv")
+data$Type <- factor(data$Sentence_Type, levels=c("OneSentence","TwoSentences"))
+data$Condition <- factor(data$Condition, levels=c("N","S"))
+data$Task <- factor(data$Task, levels=c("ButtonPress","MemoryAll","MemoryLast","Sentiment","ComprehensionQ"))
+data$Accuracy = data$Accuracy_Lax
+data$ConditionRef <- as.numeric(data$Condition != "S")
+```
+
+```{r, echo=TRUE}
+model.rt <- lmer(RT ~ Type + Task*Condition + (1 | Set) + (1 + Condition + Task | Subject), data = data, REML=FALSE, control = lmerControl(optimizer = "bobyqa"))
+```
+
+```{r, echo=TRUE}
+model.rt.noMaterialSet <- lmer(RT ~ Type + Task*Condition + (1 + Condition + Task | Subject), data = data, REML=FALSE, control = lmerControl(optimizer = "bobyqa"))
+```
+
+
+```{r, echo=TRUE}
+anova(model.rt.noMaterialSet, model.rt)
+```
+
+```{r, echo=TRUE}
+summary(model.rt)
+coef_table <- tidy(model.rt)
+coef_table$estimate <- round(coef_table$estimate, 2)
+coef_table$std.error <- round(coef_table$std.error, 2)
+coef_table$statistic <- round(coef_table$statistic, 2)
+coef_table$df <- round(coef_table$df, 2)
+coef_table$p.value <- round(coef_table$p.value, 3)
+
+write.csv(coef_table, "Tables/RT.csv", row.names = FALSE)
+```
+
+```{r, echo=TRUE}
+model.acc <- glmer(Accuracy ~ Type + Task*Condition + (1 | Set) + (1 + Condition + Task | Subject), 
+                        family = binomial, data = data, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
+
+```
+
+
+```{r, echo=TRUE}
+model.acc.noMaterialSet <- glmer(Accuracy ~ Type + Task*Condition + (1 + Condition + Task | Subject), 
+                        family = binomial, data = data, glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
+```
+
+```{r, echo=TRUE}
+anova(model.acc.noMaterialSet, model.acc)
+```
+
+```{r, echo=TRUE}
+coef_table <- tidy(model.acc)
+
+coef_table$estimate <- round(coef_table$estimate, 2)
+coef_table$std.error <- round(coef_table$std.error, 2)
+coef_table$statistic <- round(coef_table$statistic, 2)
+coef_table$p.value <- round(coef_table$p.value, 3)
+
+print(coef_table)
+write.csv(coef_table, "Tables/ACC.csv", row.names = FALSE)
+```
+
+```{r, echo=TRUE}
+coef_table <- tidy(model.acc.noMaterialSet)
+
+coef_table$estimate <- round(coef_table$estimate, 2)
+coef_table$std.error <- round(coef_table$std.error, 2)
+coef_table$statistic <- round(coef_table$statistic, 2)
+coef_table$p.value <- round(coef_table$p.value, 3)
+
+print(coef_table)
+write.csv(coef_table, "Tables/ACC_noMaterialSet.csv", row.names = FALSE)
+```
+
+

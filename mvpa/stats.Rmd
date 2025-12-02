@@ -1,0 +1,119 @@
+---
+title: "MVPA Statistical Analyses"
+output: html_document
+---
+
+```{r, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lmerTest)
+library(dplyr)
+library(readr)
+library(emmeans)
+library(multcomp)
+library(tidyr)
+```
+
+```{r}
+extract_stats <- function(m, coef_names) {
+  model.df = data.frame(coef_names, summary(m)$coefficients[,c(1,2,5)])
+  names(model.df) = c('Regression Term', 'Beta', 'SE', 'p.value')
+  model.df = model.df %>% mutate(Beta = round(Beta, 2), 
+           SE = round(SE, 2),
+           p.value = ifelse(p.value>0.001, round(p.value, 3),
+                            formatC(p.value, format = "e", digits = 2)))
+  return(model.df)
+}
+
+correct_FDR <- function(stats_df) {
+  stats_df = stats_df %>%
+    group_by(`Regression Term`) %>%
+    mutate(p.value = p.adjust(p.value, method="fdr")) %>%
+    mutate(p.value.FDR = ifelse(p.value>=0.001, as.character(round(p.value, 3)), '<.001')) %>%
+    mutate(pLabel = ifelse(p.value<0.001, "***", 
+                         ifelse(p.value<0.01, "**",
+                                ifelse(p.value<0.05, "*", ""))))
+  stats_df$p.value = NULL
+  return(stats_df)
+}
+```
+
+Load data:
+
+```{r, echo=TRUE}
+data_pth = '/Users/rgao76/Documents/DiffTasks/mvpa_2025/all_data.csv'
+data = read.csv(data_pth) 
+data$System = factor(data$System, levels=c('Language_LH', 'MD', "Language_RH"), ordered=FALSE)
+data$Accuracy = data$Y_True == data$Y_Pred
+data.stimulus = data %>% filter(Target == 'Stimulus')
+data.task = data %>% filter(Target == 'Task')
+```
+
+```{r, echo=TRUE}
+model.task.acc <- glmer(Accuracy ~ TrainingType:System:TestGroup + (1 | Subject) + (1 | Classifier), 
+                        family = binomial, data = data.task, 
+                        glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
+model.task.acc.2 <- glmer(Accuracy ~ TrainingType:System:TestGroup + (1 | Subject), 
+                        family = binomial, data = data.task, 
+                        glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
+anova(model.task.acc, model.task.acc.2)
+```
+
+```{r, echo=TRUE}
+summary(model.task.acc)
+emm <- emmeans(model.task.acc, ~ TrainingType:System:TestGroup)
+emm
+```
+
+```{r, echo=TRUE}
+custom_contr <- contrast(emm, method = list(
+  "Diff:MD:N - Diff:Language:N" = c(-1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+  "Same:MD:N - Same:Language:N" = c(0, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0),
+  "Diff:MD:S - Diff:Language:S" = c(0, 0, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0),
+  "Same:MD:S - Same:Language:S" = c(0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0, 0)
+  
+  # "Diff:MD:N - Diff:Language_RH:N" = c(0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0),
+  # "Same:MD:N - Same:Language_RH:N" = c(0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0),
+  # "Diff:MD:S - Diff:Language_RH:S" = c(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0),
+  # "Same:MD:S - Same:Language_RH:S" = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1)
+))
+test_results = test(custom_contr, side = ">", adjust='bonferroni')
+write.csv(test_results, "Data/Tests_tasks_decoding.csv")
+```
+
+```{r, echo=TRUE}
+model.stimulus.acc <- glmer(Accuracy ~ TrainingType:System:TestGroup + (1 | Subject) + (1 | Classifier), 
+                        family = binomial, data = data.stimulus, 
+                        glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
+model.stimulus.acc.2 <- glmer(Accuracy ~ TrainingType:System:TestGroup + (1 | Subject), 
+                        family = binomial, data = data.stimulus, 
+                        glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5)))
+anova(model.stimulus.acc, model.stimulus.acc.2)
+```
+
+```{r, echo=TRUE}
+summary(model.stimulus.acc)
+emm <- emmeans(model.stimulus.acc,  ~ TrainingType:System:TestGroup)
+emm
+```
+
+```{r, echo=TRUE}
+custom_contr <- contrast(emm, method = list(
+  "Diff:Language:V1 - Diff:MD:V1" = c(1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+  "Same:Language:V1 - Same:MD:V1" = c(0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+  "Diff:Language:V2 - Diff:MD:V2" = c(0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+  "Same:Language:V2 - Same:MD:V2" = c(0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0),
+  "Diff:Language:V3 - Diff:MD:V3" = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0),
+  "Same:Language:V3 - Same:MD:V3" = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0)
+  
+#  "Diff:Language_RH:V1 - Diff:MD:V1" = c(0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#  "Same:Language_RH:V1 - Same:MD:V1" = c(0, 0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#  "Diff:Language_RH:V2 - Diff:MD:V2" = c(0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0),
+#  "Same:Language_RH:V2 - Same:MD:V2" = c(0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0, 0, 0),
+#  "Diff:Language_RH:V3 - Diff:MD:V3" = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1, 0),
+#  "Same:Language_RH:V3 - Same:MD:V3" = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 1)
+  
+))
+test_results = test(custom_contr, side = ">", adjust='bonferroni')
+write.csv(test_results, "Data/Tests_conditions_decoding.csv")
+```
+
