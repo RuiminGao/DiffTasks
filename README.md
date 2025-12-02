@@ -1,2 +1,18 @@
 # DiffTasks
-Resources for the paper "The language network responds robustly to sentences across diverse tasks."
+Resources for the paper **The Effect of Task on Sentence Processing in the Language, Multiple Demand, and Default Mode Brain Networks** by *Ruimin Gao, Chandler Cheung, Matthew Siegelman, Alvincé L. A. Pongos, Hope H. Kean, Alyx Tanner, Evelina Fedorenko, Anna A. Ivanova*
+
+Data and code are available to generate the plots and conduct the statistical analyses.
+
+**Behavioral Analysis:** Analyze the behavioral data (accuracy and response time) for the different tasks and materials set
+
+**Effect Estimation:** Analyze the effect sizes (activations) for each task for the language and Multiple Demand (MD) system
+
+**Laterality Analysis:**: Analyze the literality indexes of participants during language localizer tasks
+
+**Overlap Analysis:** Analyze the proportion of overlap between the different fROIs across tasks
+
+**Spatial Correlation Analysis:** Analyze the correlations between the activation patterns for the different tasks
+
+**Multivariate Pattern Analysis:** Analyze the decodability of stimulus type and task within the language and MD system
+
+
