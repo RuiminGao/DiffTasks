@@ -3,14 +3,14 @@ Resources for the paper **The Effect of Task on Sentence Processing in the Langu
 
 Experiment scripts are included, as well as data and code for generating the plots and conducting the statistical analyses:
 
-**Behavioral Analysis:** Analyze the behavioral data (accuracy and response time) for the different tasks and materials set
+- **Behavioral Analysis:** Analyze the behavioral data (accuracy and response time) for the different tasks and materials set
 
-**Effect Estimation:** Analyze the effect sizes (activations) for each task for the language and Multiple Demand (MD) system
+- **Effect Estimation:** Analyze the effect sizes (activations) for each task for the language and Multiple Demand (MD) system
 
-**Overlap Analysis:** Analyze the proportion of overlap between the different fROIs across tasks
+- **Overlap Analysis:** Analyze the proportion of overlap between the different fROIs across tasks
 
-**Spatial Correlation Analysis:** Analyze the correlations between the activation patterns for the different tasks
+- **Spatial Correlation Analysis:** Analyze the correlations between the activation patterns for the different tasks
 
-**Multivariate Pattern Analysis:** Analyze the decodability of stimulus type and task within the language and MD system
+- **Multivariate Pattern Analysis:** Analyze the decodability of stimulus type and task within the language and MD system
 
 
