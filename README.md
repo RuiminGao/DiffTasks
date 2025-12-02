@@ -1,13 +1,11 @@
 # DiffTasks
 Resources for the paper **The Effect of Task on Sentence Processing in the Language, Multiple Demand, and Default Mode Brain Networks** by *Ruimin Gao, Chandler Cheung, Matthew Siegelman, Alvincé L. A. Pongos, Hope H. Kean, Alyx Tanner, Evelina Fedorenko, Anna A. Ivanova*
 
-Data and code are available to generate the plots and conduct the statistical analyses.
+Experiment scripts are included, as well as data and code for generating the plots and conducting the statistical analyses:
 
 **Behavioral Analysis:** Analyze the behavioral data (accuracy and response time) for the different tasks and materials set
 
 **Effect Estimation:** Analyze the effect sizes (activations) for each task for the language and Multiple Demand (MD) system
-
-**Laterality Analysis:**: Analyze the literality indexes of participants during language localizer tasks
 
 **Overlap Analysis:** Analyze the proportion of overlap between the different fROIs across tasks
 
