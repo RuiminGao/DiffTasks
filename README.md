@@ -1,5 +1,5 @@
 # DiffTasks
-Resources for the paper **The language network responds robustly to sentences across diverse tasks** by *Ruimin Gao, Chandler Cheung, Matthew Siegelman, Alvincé L. A. Pongos, Hope H. Kean, Alyx Tanner, Evelina Fedorenko, Anna A. Ivanova*
+Resources for the paper [**The language network responds robustly to sentences across tasks**](https://direct.mit.edu/imag/article/doi/10.1162/IMAG.a.1283/137022/The-language-network-responds-robustly-to) by *Ruimin Gao, Chandler Cheung, Matthew Siegelman, Alvincé L. A. Pongos, Hope H. Kean, Alyx Tanner, Evelina Fedorenko, Anna A. Ivanova*
 
 Experiment scripts are included, as well as data and code for generating the plots and conducting the statistical analyses:
 
